@@ -1,0 +1,80 @@
+version: '3.9'
+
+name: uasp_akso
+
+services:
+  nginx:
+    image: nginx:latest
+    container_name: nginx_server
+    ports:
+      - "8080:80"
+    volumes:
+      - ./static_data:/usr/share/nginx/html  # Folder tempat file index.html berada
+    configs:
+      - source: nginx_config
+        target: /etc/nginx/nginx.conf  # Lokasi file konfigurasi nginx di dalam container
+    networks:
+      - app_network
+    restart: unless-stopped
+    labels:
+      app: nginx
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  postgres:
+    image: postgres:latest
+    container_name: postgres_db
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: secret
+      POSTGRES_DB: app_db
+      POSTGRES_HOST_AUTH_METHOD: trust
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data  # Volume untuk data PostgreSQL
+    networks:
+      - app_network
+    restart: always
+    labels:
+      app: postgres
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "8082:80"
+    depends_on:
+      - postgres
+    networks:
+      - app_network
+    restart: on-failure
+    labels:
+      app: pgadmin
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+networks:
+  app_network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+
+configs:
+  nginx_config:
+    file: ./nginx_config/nginx.conf
